@@ -15,6 +15,10 @@ import android.widget.Toast;
 
 public class LoginActivity extends AppCompatActivity {
 
+    // TODO #####
+    // 1. https://aries574.tistory.com/152 참조해서 EditText 테마 만들어 수정하기
+    // 2. 로그인 화면 레이아웃 재구성
+
     EditText et_id;
     EditText et_password;
     TextView btn_signUp;

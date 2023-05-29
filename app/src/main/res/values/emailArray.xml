@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="email_array">
+        <item>gmail.com</item>
+        <item>hanmail.net</item>
+        <item>icloud.com</item>
+        <item>kakao.com</item>
+        <item>msn.com</item>
+        <item>nate.com</item>
+        <item>naver.com</item>
+        <item>tistory.com</item>
+        <item>yahoo.com</item>
+        <item>직접입력</item>
+    </string-array>
+</resources>
