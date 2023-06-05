@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -18,11 +19,20 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.annotations.NotNull;
+
 import org.w3c.dom.Text;
 
 import java.lang.reflect.Field;
 
 public class SignUpActivity extends AppCompatActivity {
+
+    // DB
+    private DatabaseReference mDatabase;
 
     // ColorSet
     int color_warningRed;
@@ -37,7 +47,9 @@ public class SignUpActivity extends AppCompatActivity {
     EditText et_id;
     EditText et_password;
     EditText et_passwordCheck;
+    EditText et_email;
     EditText et_nickName;
+    EditText et_team;
 
     // ImageView
     ImageView iv_passwordCheck;
@@ -45,18 +57,30 @@ public class SignUpActivity extends AppCompatActivity {
     // Button
     ImageButton btn_back;
     Button btn_idCheck;
+    Button btn_teamCheck;
+    Button btn_emailCheck;
+    Button btn_signUp;
 
     // Spinner
     Spinner emailSpinner;
     String[] emailItems;
 
+    // CheckBox
+    CheckBox cb_team;
+
     String userID;
     String userPassword;
+    String userNickname;
+    String userEmail;
+    String userTeam;
     String emailDomain;
 
 
-    boolean isIdCheckDone = false;
-    boolean isPasswordCheckDone = false;
+    boolean isIdChecked = false;
+    boolean isPasswordChecked = false;
+    boolean isEmailChecked = false;
+    boolean isNicknameChecked = false;
+    boolean isTeamChecked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,15 +97,24 @@ public class SignUpActivity extends AppCompatActivity {
         et_id = findViewById(R.id.signUp_id_ET);
         et_password = findViewById(R.id.signUp_password_ET);
         et_passwordCheck = findViewById(R.id.signUp_passwordCheck_ET);
+        et_email = findViewById(R.id.signUp_email_ET);
         et_nickName = findViewById(R.id.signUp_nickName_ET);
+        et_team = findViewById(R.id.signUp_team_ET);
 
         btn_back = findViewById(R.id.signUp_back_Btn);
         btn_idCheck = findViewById(R.id.signUp_idCheck_Btn);
+        btn_teamCheck = findViewById(R.id.signUp_team_Btn);
+        btn_emailCheck = findViewById(R.id.signUp_emailCheck_Btn);
+        btn_signUp = findViewById(R.id.signUp_userSignUp_Btn);
 
         emailSpinner = findViewById(R.id.signUp_email_Spinner);
         emailItems = getResources().getStringArray(R.array.email_array);
 
+        cb_team = findViewById(R.id.signUp_team_CB);
+
         iv_passwordCheck = findViewById(R.id.signUp_passwordCheck_IV);
+
+        mDatabase = FirebaseDatabase.getInstance().getReference();
 
 
         // 아이디 중복 체크 클릭
@@ -97,7 +130,7 @@ public class SignUpActivity extends AppCompatActivity {
                     tv_id_warning.setTextColor(color_warningRed);
                     tv_id_warning.setText("아이디는 최소 5자 이상이어야 합니다.");
                 } else {
-                    isIdCheckDone = true;
+                    isIdChecked = true;
                     et_id.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.checkedGreen));
                     userID = et_id.getText().toString();
                     et_id.setText(userID);
@@ -118,9 +151,10 @@ public class SignUpActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                isPasswordCheckDone = false;
+                isPasswordChecked = false;
                 userPassword = et_password.getText().toString();
                 if (et_passwordCheck.getText().toString().equals(userPassword)) samePasswordWritten();
+                else wrongPasswordWritten();
             }
 
             @Override
@@ -142,11 +176,8 @@ public class SignUpActivity extends AppCompatActivity {
                 if(et_passwordCheck.getText().toString().equals(userPassword)) {
                     samePasswordWritten();
                 } else {
-                    isPasswordCheckDone = false;
-                    tv_passwordCheck_warning.setTextColor(color_warningRed);
-                    tv_passwordCheck_warning.setText("비밀번호가 틀립니다.");
-                    et_passwordCheck.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.warningRed));
-                    iv_passwordCheck.setVisibility(View.INVISIBLE);
+                    isPasswordChecked = false;
+                    wrongPasswordWritten();
                 }
             }
 
@@ -174,6 +205,8 @@ public class SignUpActivity extends AppCompatActivity {
                     tv_nickName_warning.setTextColor(color_checkedGreen);
                     tv_nickName_warning.setText("사용 가능한 닉네임입니다.");
                     et_nickName.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.checkedGreen));
+                    isNicknameChecked = true;
+                    userNickname = et_nickName.getText().toString();
                 }
             }
 
@@ -205,6 +238,54 @@ public class SignUpActivity extends AppCompatActivity {
         // 2. 직접 입력 구현
         // 3. 코드 깔끔하게 정리하기 (함수, 기능별로)
 
+
+        btn_emailCheck.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                userEmail = et_email.getText().toString() + "@" + emailDomain;
+                isEmailChecked = true;
+                System.out.println("이메일 체크 완료 : " + userEmail);
+            }
+        });
+
+        cb_team.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(cb_team.isChecked()) {
+                    et_team.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.white));
+                    et_team.setEnabled(false);
+                    btn_teamCheck.setEnabled(false);
+                    userTeam = "";
+                    isTeamChecked = true;
+                } else {
+                    et_team.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.boldGray));
+                    et_team.setEnabled(true);
+                    btn_teamCheck.setEnabled(true);
+                    isTeamChecked = false;
+                }
+            }
+        });
+
+        btn_signUp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!isIdChecked) {
+
+                }else if(!isPasswordChecked) {
+
+                }else if(!isEmailChecked) {
+
+                }else if(!isNicknameChecked) {
+
+                }else if(!isTeamChecked) {
+
+                } else {
+                    writeNewUser(userID, userPassword, userNickname, userEmail, userTeam);
+                    finish();
+                }
+            }
+        });
+
         btn_back.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -219,6 +300,34 @@ public class SignUpActivity extends AppCompatActivity {
         tv_passwordCheck_warning.setText("비밀번호가 일치합니다.");
         et_passwordCheck.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.checkedGreen));
         iv_passwordCheck.setVisibility(View.VISIBLE);
-        isPasswordCheckDone = true;
+        isPasswordChecked = true;
+    }
+
+    protected void wrongPasswordWritten() {
+        tv_passwordCheck_warning.setTextColor(color_warningRed);
+        tv_passwordCheck_warning.setText("비밀번호가 틀립니다.");
+        et_passwordCheck.setBackgroundTintList(ContextCompat.getColorStateList(getApplicationContext(), R.color.warningRed));
+        iv_passwordCheck.setVisibility(View.INVISIBLE);
+    }
+
+    private void writeNewUser(String id, String password, String nickname, String email, String team) {
+        User user = new User(id, password, nickname, email, team);
+        System.out.println(user);
+        mDatabase.child("users").child(id).setValue(user)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        // Write was successful!
+                        Toast.makeText(getApplicationContext(), "저장을 완료했습니다.", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NotNull Exception e) {
+                        // Write failed
+                        Toast.makeText(getApplicationContext(), "저장을 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
     }
 }
